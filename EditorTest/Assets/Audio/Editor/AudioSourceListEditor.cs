@@ -38,6 +38,7 @@ public class AudioSourceListEditor : EditorWindow
     GameObject prebewGameObject;
     AudioSource prebewAudioSource;
 
+    //Windowがアクティブ状態に呼び出し
     private void OnEnable()
     {
         var defaultData = AssetDatabase.LoadAssetAtPath<AudioSourceListClass>("Assets/Audio/ScriptableObjects/AudioSourceListClass.asset");
@@ -45,11 +46,13 @@ public class AudioSourceListEditor : EditorWindow
         this.BaseDataPath = AssetDatabase.GetAssetPath(defaultData);
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
     }
+    //Windowが非アクティブ状態に呼び出し
     private void OnDisable()
     {
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
     }
 
+    //プレイモードの変更を検出
     private void OnPlayModeStateChanged(PlayModeStateChange state)
     {       
         if (state == PlayModeStateChange.EnteredPlayMode)
@@ -63,6 +66,7 @@ public class AudioSourceListEditor : EditorWindow
     // プレイモード開始時の処理を行う関数
     private void OnEnterPlayMode()
     {
+        //テスト用のオブジェクト削除
         if (prebewGameObject != null)
             DestroyImmediate(prebewGameObject);
     }
@@ -77,6 +81,7 @@ public class AudioSourceListEditor : EditorWindow
         //if (BaseData == null) BaseData = AssetDatabase.LoadAssetAtPath<AudioSourceListClass>(BaseDataPath).Clone();
         using (new EditorGUILayout.VerticalScope())
         {
+            //他ファイル指定
             using (new EditorGUILayout.HorizontalScope())
             {
                 var beforeData = this.BaseData;
@@ -87,21 +92,22 @@ public class AudioSourceListEditor : EditorWindow
                     AudioValueProperty = null;
                 }
             }
-
+            //上部ツールボタン
             using (new EditorGUILayout.HorizontalScope())
             {
+                //Listに要素を追加
                 if (GUILayout.Button("Audioを追加", GUILayout.MaxWidth(120f), GUILayout.MaxHeight(20f)))
                 {
                     Undo.RecordObject(BaseData, "Add Audio");
                     BaseData.audioValue.Add(new AudioSourceListClass.AudioValue());
                 }
-
+                //編集前に戻す
                 if (GUILayout.Button("元に戻す", GUILayout.MaxWidth(60f), GUILayout.MaxHeight(20f)))
                 {
                     this.BaseData = AssetDatabase.LoadAssetAtPath<AudioSourceListClass>(this.BaseDataPath).Clone();
                     EditorGUIUtility.editingTextField = false;
                 }
-
+                //編集を保存する
                 if (GUILayout.Button("保存", GUILayout.MaxWidth(60f), GUILayout.MaxHeight(20f)))
                 {
                     var data = AssetDatabase.LoadAssetAtPath<AudioSourceListClass>(this.BaseDataPath);
@@ -117,8 +123,11 @@ public class AudioSourceListEditor : EditorWindow
                     this.Mode = !Mode;
                 }
             }
+
+            
             using (new EditorGUILayout.HorizontalScope(GUILayout.MaxHeight(800f)))
             {
+                //Listの中身を表示
                 using (var scroll_0 = new EditorGUILayout.ScrollViewScope(ListScrollPosition, GUILayout.MinWidth(290f)))
                 {
                     if (BaseData == null)
@@ -130,26 +139,19 @@ public class AudioSourceListEditor : EditorWindow
                     }
                     else
                     {
-                        ShowIndex();
+                        TitleView();
 
                         ListScrollPosition = scroll_0.scrollPosition;
 
                         for (int i = 0; i < this.BaseData.audioValue.Count; i++)
                         {
+
+                            if (NullCheck(AudioValueObject, AudioValueProperty) && this.ListSelectedIndex == i)
+                                GUI.color = Color.green;
+
                             using (new EditorGUILayout.HorizontalScope())
                             {
-                                if (NullCheck(AudioValueObject, AudioValueProperty) && this.ListSelectedIndex == i)
-                                    GUI.color = Color.green;
-
-                                EditorGUILayout.LabelField(i.ToString(), GUILayout.MaxWidth(30f));
-                                EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
-
-                                if (BaseData.audioValue[i]._Audioclip != null)
-                                    EditorGUILayout.LabelField(BaseData.audioValue[i]._Audioclip.ToString(), GUILayout.MaxWidth(150f));
-                                else
-                                    EditorGUILayout.LabelField("null", GUILayout.MaxWidth(150f));
-
-                                EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
+                                MemberView(i, BaseData.audioValue[i]._Audioclip);
 
                                 if (GUILayout.Button("編集", GUILayout.MaxWidth(60f)))
                                 {
@@ -158,28 +160,29 @@ public class AudioSourceListEditor : EditorWindow
                                     AudioValueObject = new SerializedObject(BaseData);
                                     AudioValueProperty = AudioValueObject.FindProperty("audioValue").GetArrayElementAtIndex(ListSelectedIndex);
                                 }
-
-
                                 GUI.color = Color.white;
                             }
                         }
                     }
                 }
+
                 using (new EditorGUILayout.VerticalScope())
                 {
                     if (Mode)
                     {
+                        //シーン上のオブジェクトを選択
                         targetGameObject = EditorGUILayout.ObjectField("GameObject", targetGameObject,
                             typeof(GameObject), true, GUILayout.MaxWidth(280f)) as GameObject;
 
                         if (targetGameObject != null)
                         {
+                            //オブジェクトにあるAudioSourceをコンポーネントの数だけ取得
                             targetAudioSources = new List<AudioSource>(targetGameObject.GetComponents<AudioSource>());
 
+                            //Listの中身を表示
                             if (targetAudioSources.Count > 0)
                             {
-                                ShowIndex();
-
+                                TitleView();
                                 using (var scroll_1 = new EditorGUILayout.ScrollViewScope(ValueScrollPosition, GUILayout.MaxWidth(280f)))
                                 {
                                     ValueScrollPosition = scroll_1.scrollPosition;
@@ -188,18 +191,10 @@ public class AudioSourceListEditor : EditorWindow
                                     {
                                         if (NullCheck(targetSerialized, targetProperty) && this.targetSelectedIndex == i)
                                             GUI.color = Color.yellow;
-
+                                       
                                         using (new EditorGUILayout.HorizontalScope())
                                         {
-                                            EditorGUILayout.LabelField(i.ToString(), GUILayout.MaxWidth(30f));
-                                            EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
-
-                                            if (targetAudioSources[i].clip != null)
-                                                EditorGUILayout.LabelField(targetAudioSources[i].clip.ToString(), GUILayout.MaxWidth(150f));
-                                            else
-                                                EditorGUILayout.LabelField("null", GUILayout.MaxWidth(150f));
-
-                                            EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
+                                            MemberView(i, targetAudioSources[i].clip);
 
                                             if (GUILayout.Button("編集", GUILayout.MaxWidth(60f)))
                                             {
@@ -225,6 +220,7 @@ public class AudioSourceListEditor : EditorWindow
                         {
                             using (new EditorGUILayout.HorizontalScope(GUILayout.MinWidth(280f)))
                             {
+                                //テスト再生用ボタン
                                 if (GUILayout.Button("再生", GUILayout.MaxWidth(80f), GUILayout.MaxHeight(30f)))
                                 {
                                     CreateAudioSystem();
@@ -234,7 +230,7 @@ public class AudioSourceListEditor : EditorWindow
                                     else
                                         Debug.LogWarning("AudioClipをアサインしてください。");
                                 }
-
+                                //テスト再生停止用ボタン
                                 if (GUILayout.Button("停止", GUILayout.MaxWidth(80f), GUILayout.MaxHeight(30f)))
                                 {
                                     if (prebewGameObject != null && prebewAudioSource != null)
@@ -245,7 +241,7 @@ public class AudioSourceListEditor : EditorWindow
                                             Debug.LogWarning("AudioClipをアサインしてください。");
                                     }
                                 }
-
+                                //削除用ボタン
                                 GUI.color = Color.red;
                                 if (GUILayout.Button("指定したAudioを削除", GUILayout.MaxWidth(120f), GUILayout.MaxHeight(30f)))
                                 {
@@ -260,80 +256,19 @@ public class AudioSourceListEditor : EditorWindow
                             if (NullCheck(AudioValueObject, AudioValueProperty))
                                 using (var scroll_1 = new EditorGUILayout.ScrollViewScope(ValueScrollPosition, GUILayout.MinWidth(280f)))
                                 {
-
                                     ValueScrollPosition = scroll_1.scrollPosition;
 
                                     AudioValueObject.Update();
 
-                                    // 要素のプロパティを描画
-                                    //EditorGUILayout.PropertyField(audioValueProperty, new GUIContent("audioValue"));
+                                    //プロパティの要素を描画
+                                    PropertyView(AudioValueProperty);
 
-                                    var _Audioclip = AudioValueProperty.FindPropertyRelative("_Audioclip");
-                                    EditorGUILayout.PropertyField(_Audioclip, new GUIContent("_Audioclip"));
-
-                                    var _AudioMixerGroup = AudioValueProperty.FindPropertyRelative("_AudioMixerGroup");
-                                    EditorGUILayout.PropertyField(_AudioMixerGroup, new GUIContent("_AudioMixerGroup"));
-
-                                    var _Mute = AudioValueProperty.FindPropertyRelative("_Mute");
-                                    EditorGUILayout.PropertyField(_Mute, new GUIContent("_Mute"));
-
-                                    var _BypassEffects = AudioValueProperty.FindPropertyRelative("_BypassEffects");
-                                    EditorGUILayout.PropertyField(_BypassEffects, new GUIContent("_BypassEffects"));
-
-                                    var _BypassListenerEffects = AudioValueProperty.FindPropertyRelative("_BypassListenerEffects");
-                                    EditorGUILayout.PropertyField(_BypassListenerEffects, new GUIContent("_BypassListenerEffects"));
-
-                                    var _BypassRevevbZones = AudioValueProperty.FindPropertyRelative("_BypassRevevbZones");
-                                    EditorGUILayout.PropertyField(_BypassRevevbZones, new GUIContent("_BypassRevevbZones"));
-
-                                    var _PlayOnAwake = AudioValueProperty.FindPropertyRelative("_PlayOnAwake");
-                                    EditorGUILayout.PropertyField(_PlayOnAwake, new GUIContent("_PlayOnAwake"));
-
-                                    var _Loop = AudioValueProperty.FindPropertyRelative("_Loop");
-                                    EditorGUILayout.PropertyField(_Loop, new GUIContent("_Loop"));
-
-                                    var _Priority = AudioValueProperty.FindPropertyRelative("_Priority");
-                                    EditorGUILayout.PropertyField(_Priority, new GUIContent("_Priority"));
-
-                                    var _Volume = AudioValueProperty.FindPropertyRelative("_Volume");
-                                    EditorGUILayout.PropertyField(_Volume, new GUIContent("_Volume"));
-
-                                    var _Pitch = AudioValueProperty.FindPropertyRelative("_Pitch");
-                                    EditorGUILayout.PropertyField(_Pitch, new GUIContent("_Pitch"));
-
-                                    var _StereoPan = AudioValueProperty.FindPropertyRelative("_StereoPan");
-                                    EditorGUILayout.PropertyField(_StereoPan, new GUIContent("_StereoPan"));
-
-                                    var _SpatialBlend = AudioValueProperty.FindPropertyRelative("_SpatialBlend");
-                                    EditorGUILayout.PropertyField(_SpatialBlend, new GUIContent("_SpatialBlend"));
-
-                                    var _ReverbZoneMix = AudioValueProperty.FindPropertyRelative("_ReverbZoneMix");
-                                    EditorGUILayout.PropertyField(_ReverbZoneMix, new GUIContent("_ReverbZoneMix"));
-
-                                    var _DopplerLevel = AudioValueProperty.FindPropertyRelative("_DopplerLevel");
-                                    EditorGUILayout.PropertyField(_DopplerLevel, new GUIContent("_DopplerLevel"));
-
-                                    var _Spread = AudioValueProperty.FindPropertyRelative("_Spread");
-                                    EditorGUILayout.PropertyField(_Spread, new GUIContent("_Spread"));
-
-                                    var _VolumeRolloff = AudioValueProperty.FindPropertyRelative("_VolumeRolloff");
-                                    EditorGUILayout.PropertyField(_VolumeRolloff, new GUIContent("_VolumeRolloff"));
-
-                                    var _MinDistance = AudioValueProperty.FindPropertyRelative("_MinDistance");
-                                    EditorGUILayout.PropertyField(_MinDistance, new GUIContent("_MinDistance"));
-
-                                    var _MaxDistance = AudioValueProperty.FindPropertyRelative("_MaxDistance");
-                                    EditorGUILayout.PropertyField(_MaxDistance, new GUIContent("_MaxDistance"));
-
+                                    //上限と下限が逆転しないように補正
                                     if (BaseData.audioValue[ListSelectedIndex]._MinDistance >= BaseData.audioValue[ListSelectedIndex]._MaxDistance)
                                         BaseData.audioValue[ListSelectedIndex]._MinDistance = BaseData.audioValue[ListSelectedIndex]._MaxDistance <= 0.01f ? 0 : BaseData.audioValue[ListSelectedIndex]._MaxDistance - 1f;
 
                                     if (BaseData.audioValue[ListSelectedIndex]._MaxDistance <= BaseData.audioValue[ListSelectedIndex]._MinDistance)
                                         BaseData.audioValue[ListSelectedIndex]._MaxDistance = BaseData.audioValue[ListSelectedIndex]._MinDistance + 1f;
-
-                                    var _RolloffCustomCurve = AudioValueProperty.FindPropertyRelative("_RolloffCustomCurve");
-                                    EditorGUILayout.PropertyField(_RolloffCustomCurve, new GUIContent("_RolloffCustomCurve"));
-
 
                                     // 変更を適用
                                     AudioValueObject.ApplyModifiedProperties();
@@ -351,20 +286,16 @@ public class AudioSourceListEditor : EditorWindow
                 {
                     if (Mode)
                     {
+                        //List側の要素の選択を確認
                         using (new EditorGUILayout.HorizontalScope(GUILayout.MinWidth(300f)))
                         {
                             if (NullCheck(AudioValueObject, AudioValueProperty))
                             {
                                 EditorGUILayout.LabelField(ListSelectedIndex.ToString(), GUILayout.MaxWidth(30f));
-
                                 EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
-
                                 if(BaseData.audioValue.Count > ListSelectedIndex)
                                 {
-                                    if (BaseData.audioValue[ListSelectedIndex]._Audioclip != null)
-                                        EditorGUILayout.LabelField(BaseData.audioValue[ListSelectedIndex]._Audioclip.ToString(), GUILayout.MaxWidth(260f));
-                                    else
-                                        EditorGUILayout.LabelField("null", GUILayout.MaxWidth(150f));
+                                    ClipNameView(BaseData.audioValue[ListSelectedIndex]._Audioclip, 260f);
                                 }     
                                 else
                                 {
@@ -374,21 +305,16 @@ public class AudioSourceListEditor : EditorWindow
                             else
                                 EditorGUILayout.LabelField("リスト側　未選択", GUILayout.MaxWidth(200f));
                         }
-
+                        //オブジェクト側の要素の選択を確認
                         using (new EditorGUILayout.HorizontalScope(GUILayout.MinWidth(300f)))
                         {
                             if (NullCheck(targetSerialized, targetProperty))
                             {
                                 EditorGUILayout.LabelField(targetSelectedIndex.ToString(), GUILayout.MaxWidth(30f));
-
                                 EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
-
                                 if (targetAudioSources.Count > targetSelectedIndex)
                                 {
-                                    if (targetAudioSources[targetSelectedIndex].clip != null)
-                                        EditorGUILayout.LabelField(targetAudioSources[targetSelectedIndex].clip.ToString(), GUILayout.MaxWidth(260f));
-                                    else
-                                        EditorGUILayout.LabelField("null", GUILayout.MaxWidth(150f));
+                                    ClipNameView(targetAudioSources[targetSelectedIndex].clip, 260f);
                                 }
                                 else
                                 {
@@ -401,6 +327,7 @@ public class AudioSourceListEditor : EditorWindow
 
                         using (new EditorGUILayout.HorizontalScope(GUILayout.MinWidth(300f)))
                         {
+                            //オブジェクトのAudioSourceの設定をListに上書き
                             if (GUILayout.Button("Object=> List", GUILayout.MaxWidth(100f), GUILayout.MaxHeight(20f)))
                             {
                                 if (NullCheck(targetSerialized, targetProperty) && NullCheck(AudioValueObject, AudioValueProperty))
@@ -411,7 +338,7 @@ public class AudioSourceListEditor : EditorWindow
                                 else
                                     Debug.LogWarning("要素が選択されていません。");
                             }
-
+                            //ListのAudioSourceの設定をオブジェクトに上書き
                             if (GUILayout.Button("List=> Object", GUILayout.MaxWidth(100f), GUILayout.MaxHeight(20f)))
                             {
                                     if (NullCheck(targetSerialized, targetProperty) && NullCheck(AudioValueObject, AudioValueProperty))
@@ -422,7 +349,7 @@ public class AudioSourceListEditor : EditorWindow
                                 else
                                     Debug.LogWarning("要素が選択されていません。");
                             }
-
+                            //オブジェクトのAudioSourceの設定をListに追加
                             if (GUILayout.Button("Add List", GUILayout.MaxWidth(100f), GUILayout.MaxHeight(20f)))
                             {
                                 if (NullCheck(targetSerialized, targetProperty))
@@ -435,6 +362,7 @@ public class AudioSourceListEditor : EditorWindow
                             }
                         }
 
+                        //オブジェクト側のAudioSourceの変数を順に描画
                         if (targetSerialized != null && targetProperty != null)
                         {
                             //targetProperty.Next(true);
@@ -461,7 +389,90 @@ public class AudioSourceListEditor : EditorWindow
         }
     }
 
-    private void ShowIndex()
+    //プロパティの描画
+    private void PropertyView(SerializedProperty property)
+    {
+        var _Audioclip = AudioValueProperty.FindPropertyRelative("_Audioclip");
+        EditorGUILayout.PropertyField(_Audioclip, new GUIContent("_Audioclip"));
+
+        var _AudioMixerGroup = AudioValueProperty.FindPropertyRelative("_AudioMixerGroup");
+        EditorGUILayout.PropertyField(_AudioMixerGroup, new GUIContent("_AudioMixerGroup"));
+
+        var _Mute = AudioValueProperty.FindPropertyRelative("_Mute");
+        EditorGUILayout.PropertyField(_Mute, new GUIContent("_Mute"));
+
+        var _BypassEffects = AudioValueProperty.FindPropertyRelative("_BypassEffects");
+        EditorGUILayout.PropertyField(_BypassEffects, new GUIContent("_BypassEffects"));
+
+        var _BypassListenerEffects = AudioValueProperty.FindPropertyRelative("_BypassListenerEffects");
+        EditorGUILayout.PropertyField(_BypassListenerEffects, new GUIContent("_BypassListenerEffects"));
+
+        var _BypassRevevbZones = AudioValueProperty.FindPropertyRelative("_BypassRevevbZones");
+        EditorGUILayout.PropertyField(_BypassRevevbZones, new GUIContent("_BypassRevevbZones"));
+
+        var _PlayOnAwake = AudioValueProperty.FindPropertyRelative("_PlayOnAwake");
+        EditorGUILayout.PropertyField(_PlayOnAwake, new GUIContent("_PlayOnAwake"));
+
+        var _Loop = AudioValueProperty.FindPropertyRelative("_Loop");
+        EditorGUILayout.PropertyField(_Loop, new GUIContent("_Loop"));
+
+        var _Priority = AudioValueProperty.FindPropertyRelative("_Priority");
+        EditorGUILayout.PropertyField(_Priority, new GUIContent("_Priority"));
+
+        var _Volume = AudioValueProperty.FindPropertyRelative("_Volume");
+        EditorGUILayout.PropertyField(_Volume, new GUIContent("_Volume"));
+
+        var _Pitch = AudioValueProperty.FindPropertyRelative("_Pitch");
+        EditorGUILayout.PropertyField(_Pitch, new GUIContent("_Pitch"));
+
+        var _StereoPan = AudioValueProperty.FindPropertyRelative("_StereoPan");
+        EditorGUILayout.PropertyField(_StereoPan, new GUIContent("_StereoPan"));
+
+        var _SpatialBlend = AudioValueProperty.FindPropertyRelative("_SpatialBlend");
+        EditorGUILayout.PropertyField(_SpatialBlend, new GUIContent("_SpatialBlend"));
+
+        var _ReverbZoneMix = AudioValueProperty.FindPropertyRelative("_ReverbZoneMix");
+        EditorGUILayout.PropertyField(_ReverbZoneMix, new GUIContent("_ReverbZoneMix"));
+
+        var _DopplerLevel = AudioValueProperty.FindPropertyRelative("_DopplerLevel");
+        EditorGUILayout.PropertyField(_DopplerLevel, new GUIContent("_DopplerLevel"));
+
+        var _Spread = AudioValueProperty.FindPropertyRelative("_Spread");
+        EditorGUILayout.PropertyField(_Spread, new GUIContent("_Spread"));
+
+        var _VolumeRolloff = AudioValueProperty.FindPropertyRelative("_VolumeRolloff");
+        EditorGUILayout.PropertyField(_VolumeRolloff, new GUIContent("_VolumeRolloff"));
+
+        var _MinDistance = AudioValueProperty.FindPropertyRelative("_MinDistance");
+        EditorGUILayout.PropertyField(_MinDistance, new GUIContent("_MinDistance"));
+
+        var _MaxDistance = AudioValueProperty.FindPropertyRelative("_MaxDistance");
+        EditorGUILayout.PropertyField(_MaxDistance, new GUIContent("_MaxDistance"));
+
+        var _RolloffCustomCurve = AudioValueProperty.FindPropertyRelative("_RolloffCustomCurve");
+        EditorGUILayout.PropertyField(_RolloffCustomCurve, new GUIContent("_RolloffCustomCurve"));
+    }
+
+    //Listの番号とClip名を描画
+    private void MemberView(int index, AudioClip clip)
+    {
+        EditorGUILayout.LabelField(index.ToString(), GUILayout.MaxWidth(30f));
+        EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
+        ClipNameView(clip,150f);
+        EditorGUILayout.LabelField("|", GUILayout.MaxWidth(10f));
+    }
+
+    //AudioClipの名前を描画
+    private void ClipNameView(AudioClip clip ,float size) 
+    {
+        if (clip != null)
+            EditorGUILayout.LabelField(clip.ToString(), GUILayout.MaxWidth(size));
+        else
+            EditorGUILayout.LabelField("null", GUILayout.MaxWidth(size));
+    }
+
+    //Listの上部の要素の説明を描画
+    private void TitleView()
     {
         using (new EditorGUILayout.HorizontalScope())
         {
@@ -480,6 +491,8 @@ public class AudioSourceListEditor : EditorWindow
         else
             return true;
     }
+
+    //シーン上にテスト再生用のオブジェクトを生成
     private void CreateAudioSystem()
     {
         if (prebewGameObject != null)
