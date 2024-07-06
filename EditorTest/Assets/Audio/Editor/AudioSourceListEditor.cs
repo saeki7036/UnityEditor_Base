@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class AudioSourceListEditor : EditorWindow
 {
-    [MenuItem("Editor/OriginalEditerPanels/AudioSourceListEditor", priority = 0)]
+    [MenuItem("Editor/OriginalEditerPanels/AudioSourceListEditor")]
     public static void ShowWindow()
     {
         GetWindow<AudioSourceListEditor>("AudioSourceListEditor");
